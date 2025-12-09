@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深空绿洲：学生星际旅程 (User Journey Map)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+SC:wght@300;400;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050b14;
+            color: #fff;
+            font-family: 'Noto Sans SC', sans-serif;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, #0b1a2f 0%, #050b14 100%);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* 悬浮面板样式 */
+        .info-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            background: rgba(12, 22, 45, 0.95);
+            border: 1px solid #4fd1c5;
+            box-shadow: 0 0 20px rgba(79, 209, 197, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 10;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .info-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -45%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(79, 209, 197, 0.3);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: #4fd1c5;
+            text-shadow: 0 0 8px rgba(79, 209, 197, 0.6);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #a0aec0;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-content {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .tech-tag {
+            display: inline-block;
+            background: rgba(79, 209, 197, 0.15);
+            color: #4fd1c5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(79, 209, 197, 0.3);
+        }
+
+        .activity-text {
+            color: #e2e8f0;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+        }
+        
+        .ui-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .ui-subtitle {
+            color: #4fd1c5;
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+
+        .instruction {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            color: #718096;
+            font-size: 0.9rem;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <div class="ui-overlay">
+        <h1 class="ui-title">DEEP SPACE OASIS</h1>
+        <div class="ui-subtitle">板块一：学生星际旅程 (Student Journey Map)</div>
+    </div>
+    
+    <canvas id="journeyCanvas"></canvas>
+    
+    <div class="instruction">点击节点查看任务详情与 AI 架构支持</div>
+
+    <!-- 详情面板 -->
+    <div id="infoPanel" class="info-panel">
+        <div class="panel-header">
+            <h2 class="panel-title" id="panelTitle">PHASE 1</h2>
+            <button class="close-btn" onclick="closePanel()">×</button>
+        </div>
+        
+        <div>
+            <div class="section-title">
+                <span>🚀</span> 核心教学任务 (Student Mission)
+            </div>
+            <div class="section-content activity-text" id="missionContent">
+                Loading...
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">
+                <span>🤖</span> AI 架构与技术支持 (Tech Stack)
+            </div>
+            <div class="section-content" id="techContent">
+                Loading...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('journeyCanvas');
+    const ctx = canvas.getContext('2d');
+    const panel = document.getElementById('infoPanel');
+    
+    // 数据源：基于上传的《AI需求表.docx》
+    const phases = [
+        {
+            id: 1,
+            title: "Phase 1: 启动与组队",
+            xPercent: 0.15,
+            yPercent: 0.6,
+            color: "#4299e1", // Blue
+            mission: "完成职业测评，组建探险小队，确立团队契约与规则。积累初始星空币。",
+            tech: [
+                "AI HR Agent (学情画像)",
+                "ClassIn API (问卷数据)",
+                "LangGraph (学生档案初始化)"
+            ]
+        },
+        {
+            id: 2,
+            title: "Phase 2: 规划与探索",
+            xPercent: 0.32,
+            yPercent: 0.4,
+            color: "#9f7aea", // Purple
+            mission: "利用天文软件收集星球数据，研究移居历史，评估宜居性并选定目标。",
+            tech: [
+                "AI Researcher (研究助手)",
+                "GraphRAG (防幻觉知识库)",
+                "Solar System Scope (数据源)",
+                "腾讯文档 (协作记录)"
+            ]
+        },
+        {
+            id: 3,
+            title: "Phase 3: 设计与建设",
+            xPercent: 0.5,
+            yPercent: 0.6,
+            color: "#ed8936", // Orange
+            mission: "设计基地蓝图（气闸舱、能源系统），规划物资清单，进行3D/AR建模。",
+            tech: [
+                "AI Engineer (设计顾问)",
+                "Vision Model (图纸审核)",
+                "AR魔方/Miro (建模工具)",
+                "MCP (工具连接协议)"
+            ]
+        },
+        {
+            id: 4,
+            title: "Phase 4: 运营与决策",
+            xPercent: 0.68,
+            yPercent: 0.4,
+            color: "#f56565", // Red
+            mission: "应对“太阳耀斑”等突发危机，制定资源分配策略，维持基地生存数值。",
+            tech: [
+                "AI Game Master (运营GM)",
+                "LangGraph State (数值状态机)",
+                "Simulation Engine (后果推演)"
+            ]
+        },
+        {
+            id: 5,
+            title: "Phase 5: 总结与评价",
+            xPercent: 0.85,
+            yPercent: 0.6,
+            color: "#48bb78", // Green
+            mission: "全球峰会汇报成果，进行自评、互评与AI辅助评价，生成成长报告。",
+            tech: [
+                "AI Judge (评审官)",
+                "Citation Agent (证据核验)",
+                "LLM-as-a-Judge (自动打分)"
+            ]
+        }
+    ];
+
+    let particles = [];
+    let width, height;
+    let hoveredNode = null;
+    let activeNode = null;
+
+    // 初始化画布尺寸
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        initParticles();
+    }
+    
+    window.addEventListener('resize', resize);
+
+    // 星空背景粒子
+    function initParticles() {
+        particles = [];
+        for (let i = 0; i < 150; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                size: Math.random() * 2,
+                speedX: (Math.random() - 0.5) * 0.2,
+                speedY: (Math.random() - 0.5) * 0.2,
+                alpha: Math.random()
+            });
+        }
+    }
+
+    // 绘制逻辑
+    function draw() {
+        ctx.fillStyle = "#050b14";
+        ctx.fillRect(0, 0, width, height);
+
+        // 1. 绘制星空
+        ctx.fillStyle = "#ffffff";
+        particles.forEach(p => {
+            ctx.globalAlpha = p.alpha;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            p.x += p.speedX;
+            p.y += p.speedY;
+            if (p.x < 0) p.x = width;
+            if (p.x > width) p.x = 0;
+            if (p.y < 0) p.y = height;
+            if (p.y > height) p.y = 0;
+        });
+        ctx.globalAlpha = 1;
+
+        // 2. 绘制连接轨道 (贝塞尔曲线)
+        if (phases.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(phases[0].xPercent * width, phases[0].yPercent * height);
+            
+            for (let i = 0; i < phases.length - 1; i++) {
+                const p1 = phases[i];
+                const p2 = phases[i + 1];
+                
+                const midX = (p1.xPercent + p2.xPercent) / 2 * width;
+                const cp1x = midX;
+                const cp1y = p1.yPercent * height;
+                const cp2x = midX;
+                const cp2y = p2.yPercent * height;
+
+                ctx.bezierCurveTo(
+                    cp1x, cp1y, 
+                    cp2x, cp2y, 
+                    p2.xPercent * width, p2.yPercent * height
+                );
+            }
+            
+            ctx.strokeStyle = "rgba(79, 209, 197, 0.3)";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            
+            // 轨道光晕
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "rgba(79, 209, 197, 0.6)";
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        // 3. 绘制节点
+        phases.forEach(phase => {
+            const x = phase.xPercent * width;
+            const y = phase.yPercent * height;
+            const isHovered = hoveredNode === phase;
+            const isActive = activeNode === phase;
+            const size = (isHovered || isActive) ? 25 : 18;
+
+            // 外发光环
+            if (isHovered || isActive) {
+                ctx.beginPath();
+                ctx.arc(x, y, size + 15, 0, Math.PI * 2);
+                ctx.fillStyle = phase.color;
+                ctx.globalAlpha = 0.2;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            // 核心节点
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fillStyle = isActive ? "#fff" : "#0f172a";
+            ctx.fill();
+            
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = phase.color;
+            ctx.stroke();
+
+            // 内芯
+            ctx.beginPath();
+            ctx.arc(x, y, size / 3, 0, Math.PI * 2);
+            ctx.fillStyle = phase.color;
+            ctx.fill();
+
+            // 文字标签
+            ctx.font = `bold ${isActive ? '16px' : '14px'} 'Orbitron', sans-serif`;
+            ctx.fillStyle = isActive ? "#fff" : "#a0aec0";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(phase.title.split(":")[0], x, y + size + 25);
+            
+            // 中文副标题
+            ctx.font = "12px 'Noto Sans SC'";
+            ctx.fillStyle = "#718096";
+            ctx.fillText(phase.title.split(":")[1], x, y + size + 45);
+        });
+
+        requestAnimationFrame(draw);
+    }
+
+    // 交互逻辑
+    function getMousePos(evt) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: evt.clientX - rect.left,
+            y: evt.clientY - rect.top
+        };
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+        const pos = getMousePos(e);
+        let found = null;
+        
+        phases.forEach(phase => {
+            const x = phase.xPercent * width;
+            const y = phase.yPercent * height;
+            const dx = pos.x - x;
+            const dy = pos.y - y;
+            if (dx * dx + dy * dy < 1600) { // 40px radius click area
+                found = phase;
+            }
+        });
+
+        hoveredNode = found;
+        canvas.style.cursor = found ? 'pointer' : 'default';
+    });
+
+    canvas.addEventListener('click', (e) => {
+        if (hoveredNode) {
+            openPanel(hoveredNode);
+        }
+    });
+
+    function openPanel(phase) {
+        activeNode = phase;
+        document.getElementById('panelTitle').innerText = phase.title;
+        document.getElementById('panelTitle').style.color = phase.color;
+        
+        document.getElementById('missionContent').innerText = phase.mission;
+        
+        const techContainer = document.getElementById('techContent');
+        techContainer.innerHTML = '';
+        phase.tech.forEach(t => {
+            const tag = document.createElement('span');
+            tag.className = 'tech-tag';
+            tag.innerText = t;
+            techContainer.appendChild(tag);
+        });
+
+        panel.classList.add('active');
+    }
+
+    function closePanel() {
+        panel.classList.remove('active');
+        activeNode = null;
+    }
+
+    // 启动
+    resize();
+    requestAnimationFrame(draw);
+
+</script>
+
+</body>
+</html>
